@@ -1,48 +1,67 @@
 #include "map.h"
 #include "player.h"
+#include "renderer.h"
 
 #include <SFML/Graphics.hpp>
 #include <vector>
 
+
 int main() {
-    auto window = sf::RenderWindow(sf::VideoMode({1200, 675}), "Reoom");
+  auto window = sf::RenderWindow(sf::VideoMode({1200, 675}), "Reoom");
 
-    std::vector<std::vector<int> > grid = {
-        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-        {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1},
-        {1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1},
-        {1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1},
-        {1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
-        {1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
-        {1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1},
-        {1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1},
-        {1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    };
+  // std::vector<std::vector<int> > grid = {
+  //   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+  //   {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1},
+  //   {1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1},
+  //   {1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
+  //   {1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
+  //   {1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1},
+  //   {1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1},
+  //   {1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+  // };
 
-    Map map(48.0f, grid);
-    Player player;
-    player.position = sf::Vector2f(50, 50);
+  std::vector<std::vector<int> > grid = {
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+  };
 
-    sf::Clock gameClock;
-    while (window.isOpen()) {
-        float deltaTime = gameClock.restart().asSeconds();
+  Map map(48.0f, grid);
+  Player player;
+  player.position = sf::Vector2f(50, 50);
 
-        while (const std::optional event = window.pollEvent()) {
-            bool isCloseEvent = event->is<sf::Event::Closed>();
-            if (isCloseEvent) {
-                window.close();
-            }
-        }
+  Renderer renderer;
 
+  sf::Clock gameClock;
+  while (window.isOpen()) {
+    float deltaTime = gameClock.restart().asSeconds();
 
-        player.update(deltaTime);
-
-        window.clear();
-        map.draw(window);
-        player.draw(window);
-        window.display();
+    while (const std::optional event = window.pollEvent()) {
+      bool isCloseEvent = event->is<sf::Event::Closed>();
+      if (isCloseEvent) {
+        window.close();
+      }
     }
+
+    player.update(deltaTime);
+
+    window.clear();
+    map.draw(window);
+    player.draw(window);
+    renderer.drawRays(window, player, map);
+    window.display();
+  }
 }

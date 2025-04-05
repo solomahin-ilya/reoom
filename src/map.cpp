@@ -15,7 +15,7 @@ void Map::draw(sf::RenderTarget &target) {
   }
 
   sf::RectangleShape background(sf::Vector2f((float) grid[0].size() * cellSize, (float) grid.size() * cellSize));
-  background.setFillColor(sf::Color::Green);
+  background.setFillColor(sf::Color::Black);
 
   target.draw(background);
 
@@ -24,11 +24,11 @@ void Map::draw(sf::RenderTarget &target) {
   for (size_t y = 0; y < grid.size(); y++) {
     for (size_t x = 0; x < grid[y].size(); x++) {
       if (grid[y][x] == 0) {
-        // Цвет ячеек
-        cell.setFillColor(sf::Color::Black);
+        // Цвет "пола"
+        cell.setFillColor({73, 73, 73}); // #494949
       } else if (grid[y][x] == 1) {
-        // Цвет обводки
-        cell.setFillColor(sf::Color::White);
+        // Цвет "стен"
+        cell.setFillColor({160, 219, 142});
       }
 
       // Смещение сетки относительно левого верхнего края вьюпорта
@@ -37,3 +37,7 @@ void Map::draw(sf::RenderTarget &target) {
     }
   }
 }
+
+const std::vector<std::vector<int> > &Map::getGrid() const { return grid; };
+
+float Map::getCellSize() const { return cellSize; };

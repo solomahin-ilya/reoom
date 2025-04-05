@@ -1,3 +1,7 @@
+//
+// Created by soloman on 29.03.25.
+//
+
 #ifndef _PLAYER_H
 #define _PLAYER_H
 
@@ -15,4 +19,4 @@ public:
 };
 
 
-#endif
+#endif // _PLAYER_H
