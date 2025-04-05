@@ -3,10 +3,11 @@
 
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Vertex.hpp>
+#include <SFML/Graphics/VertexArray.hpp>
 #include <SFML/Graphics/PrimitiveType.hpp>
 #include <cmath>
+#include <iostream>
 
-#include "SFML/Graphics/VertexArray.hpp"
 
 constexpr float PI = 3.14159265359f;
 constexpr size_t MAX_RAYCASTING_DEPTH = 16;
@@ -79,6 +80,7 @@ void Renderer::drawRays(sf::RenderTarget &target, const Player &player, const Ma
         (hRayPos.x - player.position.x) * (hRayPos.x - player.position.x) +
         (hRayPos.y - player.position.y) * (hRayPos.y - player.position.y)
       );
+      break;
     }
 
     hRayPos += offset;
