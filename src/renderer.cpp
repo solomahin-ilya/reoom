@@ -6,7 +6,6 @@
 #include <SFML/Graphics/VertexArray.hpp>
 #include <SFML/Graphics/PrimitiveType.hpp>
 #include <cmath>
-#include <iostream>
 
 
 constexpr float PI = 3.14159265359f;
