@@ -27,18 +27,20 @@ struct Ray {
 Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map);
 
 void Renderer::draw3dView(sf::RenderTarget &target, const Player &player, const Map &map) {
+  const sf::Color SKY_COLOR = sf::Color(100, 170, 250);
+
   sf::RectangleShape skyBox(sf::Vector2f(SCREEN_W, SCREEN_H / 2));
   sf::RectangleShape floor(sf::Vector2f(SCREEN_W, SCREEN_H / 2));
   floor.setFillColor(sf::Color(80, 80, 80));
   floor.setPosition(sf::Vector2f(0, SCREEN_H / 2));
-  skyBox.setFillColor(sf::Color(100, 170, 250));
-  skyBox.setFillColor(sf::Color(100, 170, 250));
+  skyBox.setFillColor(SKY_COLOR);
   target.draw(skyBox);
   target.draw(floor);
 
 
   float angle = player.angle - PLAYER_FOV / 2.f;
   float maxRenderDistance = MAX_RAYCASTING_DEPTH * map.getCellSize();
+  float maxFogDistance = maxRenderDistance / 4.f;
   float angleIncrement = PLAYER_FOV / (float) NUM_RAYS;
 
   for (size_t i = 0; i < NUM_RAYS; i++, angle += angleIncrement) {
@@ -58,8 +60,14 @@ void Renderer::draw3dView(sf::RenderTarget &target, const Player &player, const 
 
       sf::RectangleShape column(sf::Vector2f(COLUMN_WIDTH, wallHeight));
       column.setPosition(sf::Vector2f(i * COLUMN_WIDTH, wallOffset));
+
+      float fogPercentage = std::max(std::min(ray.distance / maxFogDistance, 1.f), 0.f);
+
       sf::Color color = map.getGrid()[ray.mapPosition.y][ray.mapPosition.x];
-      column.setFillColor(sf::Color(color.r * shade, color.g * shade, color.b * shade));
+      sf::Color colorWithShade = sf::Color(color.r * shade, color.g * shade, color.b * shade);
+      column.setFillColor(sf::Color((1.f - fogPercentage) * colorWithShade.r + fogPercentage * SKY_COLOR.r,
+                                    (1.f - fogPercentage) * colorWithShade.g + fogPercentage * SKY_COLOR.g,
+                                    (1.f - fogPercentage) * colorWithShade.b + fogPercentage * SKY_COLOR.b));
       target.draw(column);
     }
   }
