@@ -10,10 +10,14 @@
 
 #include <SFML/Graphics/RenderTarget.hpp>
 
+constexpr int SCREEN_H = 675;
+constexpr int SCREEN_W = 1200;
 
 class Renderer {
 public:
   void drawRays(sf::RenderTarget &target, const Player &player, const Map &map);
+
+  void draw3dView(sf::RenderTarget &target, const Player &player, const Map &map);
 
 private:
 };

@@ -2,6 +2,7 @@
 #include "map.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Vertex.hpp>
 #include <SFML/Graphics/VertexArray.hpp>
 #include <SFML/Graphics/PrimitiveType.hpp>
@@ -10,18 +11,49 @@
 
 constexpr float PI = 3.14159265359f;
 constexpr float PLAYER_FOV = 60.0f;
+constexpr size_t NUM_RAYS = 600;
 constexpr size_t MAX_RAYCASTING_DEPTH = 16;
+constexpr float COLUMN_WIDTH = SCREEN_W / (float) NUM_RAYS;
+
 
 struct Ray {
   sf::Vector2f hitPosition;
   float distance;
   bool hit;
+  bool isHitVertical;
 };
 
 Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map);
 
+void Renderer::draw3dView(sf::RenderTarget &target, const Player &player, const Map &map) {
+  float angle = player.angle - PLAYER_FOV / 2.f;
+  float maxRenderDistance = MAX_RAYCASTING_DEPTH * map.getCellSize();
+  float angleIncrement = PLAYER_FOV / (float) NUM_RAYS;
+
+  for (size_t i = 0; i < NUM_RAYS; i++, angle += angleIncrement) {
+    Ray ray = castRay(player.position, angle, map);
+
+    if (ray.hit) {
+      ray.distance *= std::cos((player.angle - angle) * PI / 180.f);
+      float wallHeight = (map.getCellSize() * SCREEN_H) / ray.distance;
+      if (wallHeight > SCREEN_H) {
+        wallHeight = SCREEN_H;
+      }
+
+      float brightness = std::max(1.f - (ray.distance / maxRenderDistance), 0.f);
+      float shade = (ray.isHitVertical ? 0.8f : 1.f) * brightness;
+      float wallOffset = SCREEN_H / 2.f - wallHeight / 2.f;
+
+      sf::RectangleShape column(sf::Vector2f(COLUMN_WIDTH, wallHeight));
+      column.setPosition(sf::Vector2f(i * COLUMN_WIDTH, wallOffset));
+      column.setFillColor(sf::Color(255 * shade, 255 * shade, 255 * shade));
+      target.draw(column);
+    }
+  }
+}
+
 void Renderer::drawRays(sf::RenderTarget &target, const Player &player, const Map &map) {
-  for (float angle = player.angle - PLAYER_FOV / 2.0f; angle < player.angle + PLAYER_FOV; angle += 0.5f) {
+  for (float angle = player.angle - PLAYER_FOV / 2.f; angle < player.angle + PLAYER_FOV; angle += 0.5f) {
     Ray ray = castRay(player.position, angle, map);
 
     if (ray.hit) {
@@ -118,6 +150,7 @@ Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map) {
       ? hRayPos
       : vRayPos,
     std::min(hDist, vDist),
-    hit
+    hit,
+    vDist < hDist
   };
 }
