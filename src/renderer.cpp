@@ -12,12 +12,13 @@
 constexpr float PI = 3.14159265359f;
 constexpr float PLAYER_FOV = 60.0f;
 constexpr size_t NUM_RAYS = 600;
-constexpr size_t MAX_RAYCASTING_DEPTH = 16;
+constexpr size_t MAX_RAYCASTING_DEPTH = 64;
 constexpr float COLUMN_WIDTH = SCREEN_W / (float) NUM_RAYS;
 
 
 struct Ray {
   sf::Vector2f hitPosition;
+  sf::Vector2u mapPosition;
   float distance;
   bool hit;
   bool isHitVertical;
@@ -57,7 +58,8 @@ void Renderer::draw3dView(sf::RenderTarget &target, const Player &player, const 
 
       sf::RectangleShape column(sf::Vector2f(COLUMN_WIDTH, wallHeight));
       column.setPosition(sf::Vector2f(i * COLUMN_WIDTH, wallOffset));
-      column.setFillColor(sf::Color(255 * shade, 255 * shade, 255 * shade));
+      sf::Color color = map.getGrid()[ray.mapPosition.y][ray.mapPosition.x];
+      column.setFillColor(sf::Color(color.r * shade, color.g * shade, color.b * shade));
       target.draw(column);
     }
   }
@@ -90,6 +92,7 @@ Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map) {
 
   bool hit = false;
 
+  sf::Vector2u vMapPos, hMapPos;
   sf::Vector2f vRayPos, hRayPos, offset;
 
   // Vertical
@@ -112,12 +115,13 @@ Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map) {
     int mapX = (int) (vRayPos.x / cellSize);
     int mapY = (int) (vRayPos.y / cellSize);
 
-    if (mapY < grid.size() && mapX < grid[mapY].size() && grid[mapY][mapX]) {
+    if (mapY < grid.size() && mapX < grid[mapY].size() && grid[mapY][mapX] != sf::Color::Black) {
       hit = true;
       vDist = std::sqrt(
         (vRayPos.x - start.x) * (vRayPos.x - start.x) +
         (vRayPos.y - start.y) * (vRayPos.y - start.y)
       );
+      vMapPos = sf::Vector2u(mapX, mapY);
       break;
     }
 
@@ -144,12 +148,13 @@ Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map) {
     int mapX = (int) (hRayPos.x / cellSize);
     int mapY = (int) (hRayPos.y / cellSize);
 
-    if (mapY < grid.size() && mapX < grid[mapY].size() && grid[mapY][mapX]) {
+    if (mapY < grid.size() && mapX < grid[mapY].size() && grid[mapY][mapX] != sf::Color::Black) {
       hit = true;
       hDist = std::sqrt(
         (hRayPos.x - start.x) * (hRayPos.x - start.x) +
         (hRayPos.y - start.y) * (hRayPos.y - start.y)
       );
+      hMapPos = sf::Vector2u(mapX, mapY);
       break;
     }
 
@@ -160,6 +165,9 @@ Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map) {
     hDist < vDist
       ? hRayPos
       : vRayPos,
+    hDist < vDist
+      ? hMapPos
+      : vMapPos,
     std::min(hDist, vDist),
     hit,
     vDist < hDist
