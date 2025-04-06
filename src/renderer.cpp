@@ -26,6 +26,16 @@ struct Ray {
 Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map);
 
 void Renderer::draw3dView(sf::RenderTarget &target, const Player &player, const Map &map) {
+  sf::RectangleShape skyBox(sf::Vector2f(SCREEN_W, SCREEN_H / 2));
+  sf::RectangleShape floor(sf::Vector2f(SCREEN_W, SCREEN_H / 2));
+  floor.setFillColor(sf::Color(80, 80, 80));
+  floor.setPosition(sf::Vector2f(0, SCREEN_H / 2));
+  skyBox.setFillColor(sf::Color(100, 170, 250));
+  skyBox.setFillColor(sf::Color(100, 170, 250));
+  target.draw(skyBox);
+  target.draw(floor);
+
+
   float angle = player.angle - PLAYER_FOV / 2.f;
   float maxRenderDistance = MAX_RAYCASTING_DEPTH * map.getCellSize();
   float angleIncrement = PLAYER_FOV / (float) NUM_RAYS;
@@ -42,6 +52,7 @@ void Renderer::draw3dView(sf::RenderTarget &target, const Player &player, const 
 
       float brightness = std::max(1.f - (ray.distance / maxRenderDistance), 0.f);
       float shade = (ray.isHitVertical ? 0.8f : 1.f) * brightness;
+      // float shade = (ray.isHitVertical ? 0.8f : 1.f); // without brightness
       float wallOffset = SCREEN_H / 2.f - wallHeight / 2.f;
 
       sf::RectangleShape column(sf::Vector2f(COLUMN_WIDTH, wallHeight));
