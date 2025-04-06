@@ -7,7 +7,7 @@
 
 
 int main() {
-  auto window = sf::RenderWindow(sf::VideoMode({1200, 675}), "Reoom");
+  auto window = sf::RenderWindow(sf::VideoMode({SCREEN_W, SCREEN_H}), "Reoom", sf::Style::Close | sf::Style::Titlebar);
 
   std::vector<std::vector<int> > grid = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
@@ -39,6 +39,21 @@ int main() {
   //   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
   // };
 
+  // std::vector<std::vector<int> > grid = {
+  //   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1},
+  //   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+  // };
+
   Map map(48.0f, grid);
   Player player;
   player.position = sf::Vector2f(50, 50);
@@ -59,9 +74,10 @@ int main() {
     player.update(deltaTime);
 
     window.clear();
-    map.draw(window);
-    player.draw(window);
-    renderer.drawRays(window, player, map);
+    // map.draw(window); // for editor
+    // player.draw(window); // for editor
+    renderer.draw3dView(window, player, map);
+    // renderer.drawRays(window, player, map); // for editor
     window.display();
   }
 }
