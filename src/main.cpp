@@ -54,11 +54,12 @@ int main() {
   //   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
   // };
 
-  Map map(48.0f, "map.png");
+  Map map(48.0f, "resources/map.png");
   Player player;
   player.position = sf::Vector2f(70, 70);
 
-  Renderer renderer;
+  Renderer renderer = Renderer(sf::Texture("resources/cobblestone.png"));
+  renderer.init();
 
   sf::Clock gameClock;
   while (window.isOpen()) {
