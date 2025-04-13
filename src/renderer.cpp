@@ -7,13 +7,11 @@
 #include <SFML/Graphics/VertexArray.hpp>
 #include <SFML/Graphics/PrimitiveType.hpp>
 #include <cmath>
-
+#include <iostream>
 
 constexpr float PI = 3.14159265359f;
 constexpr float PLAYER_FOV = 60.0f;
-constexpr size_t NUM_RAYS = 600;
 constexpr size_t MAX_RAYCASTING_DEPTH = 64;
-constexpr float COLUMN_WIDTH = SCREEN_W / (float) NUM_RAYS;
 
 
 struct Ray {
@@ -23,6 +21,35 @@ struct Ray {
   bool hit;
   bool isHitVertical;
 };
+
+Renderer::Renderer(sf::Texture wallTexture): wallSprite(sf::Sprite(wallTexture)) {
+  // default textures
+  if (!wallTexture.loadFromFile("resources/cobblestone.png")) {
+    std::cerr << "Failed to load wall texture" << std::endl;
+  };
+
+  if (wallTexture.getSize().x != wallTexture.getSize().y) {
+    std::cerr << "ERROR: Texture in not square" << std::endl;
+  }
+
+  wallSprite = sf::Sprite(wallTexture);
+}
+
+void Renderer::init() {
+  // current textures
+  if (!wallTexture.loadFromFile("resources/cobblestone1.png")) {
+    std::cerr << "Failed to load wall sprite" << std::endl;
+    return;
+  }
+
+  if (wallTexture.getSize().x != wallTexture.getSize().y) {
+    std::cerr << "ERROR: Texture in not square" << std::endl;
+    return;
+  }
+
+  wallSprite = sf::Sprite(wallTexture);
+}
+
 
 Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map);
 
@@ -37,147 +64,99 @@ void Renderer::draw3dView(sf::RenderTarget &target, const Player &player, const 
   target.draw(skyBox);
   target.draw(floor);
 
+  sf::RectangleShape column{sf::Vector2f(1.f, 1.f)};
 
-  float angle = player.angle - PLAYER_FOV / 2.f;
-  float maxRenderDistance = MAX_RAYCASTING_DEPTH * map.getCellSize();
-  float maxFogDistance = maxRenderDistance / 4.f;
-  float angleIncrement = PLAYER_FOV / (float) NUM_RAYS;
+  float radians = player.angle * PI / 180.f;
+  sf::Vector2f direction{std::cos(radians), std::sin(radians)};
+  sf::Vector2f plane{-direction.y, direction.x};
 
-  for (size_t i = 0; i < NUM_RAYS; i++, angle += angleIncrement) {
-    Ray ray = castRay(player.position, angle, map);
+  sf::VertexArray walls{
+    sf::PrimitiveType::Lines
+  };
+  for (size_t i = 0; i < SCREEN_W; i++) {
+    float cameraX = i * 2.f / SCREEN_W - 1.f; // -1.f -> 0.f -> 1.f
+    sf::Vector2f rayPos = player.position / map.getCellSize();
+    sf::Vector2f rayDir = direction + plane * cameraX;
 
-    if (ray.hit) {
-      ray.distance *= std::cos((player.angle - angle) * PI / 180.f);
-      float wallHeight = (map.getCellSize() * SCREEN_H) / ray.distance;
-      if (wallHeight > SCREEN_H) {
-        wallHeight = SCREEN_H;
+    sf::Vector2f deltaDist{
+      std::abs(1.f / rayDir.x),
+      std::abs(1.f / rayDir.y),
+    };
+
+    sf::Vector2i mapPos{rayPos};
+    sf::Vector2i step;
+    sf::Vector2f sideDist;
+
+    if (rayDir.x < 0.f) {
+      step.x = -1;
+      sideDist.x = (-mapPos.x + rayPos.x) * deltaDist.x;
+    } else {
+      step.x = 1;
+      sideDist.x = (mapPos.x - rayPos.x + 1.f) * deltaDist.x;
+    }
+
+
+    if (rayDir.y < 0.f) {
+      step.y = -1;
+      sideDist.y = (-mapPos.y + rayPos.y) * deltaDist.y;
+    } else {
+      step.y = 1;
+      sideDist.y = (mapPos.y - rayPos.y + 1.f) * deltaDist.y;
+    }
+
+    bool didHit{}, isHitVertical{};
+
+    size_t depth = 0;
+    while (!didHit && depth < MAX_RAYCASTING_DEPTH) {
+      if (sideDist.x < sideDist.y) {
+        sideDist.x += deltaDist.x;
+        mapPos.x += step.x;
+        isHitVertical = false;
+      } else {
+        sideDist.y += deltaDist.y;
+        mapPos.y += step.y;
+        isHitVertical = true;
       }
 
-      float brightness = std::max(1.f - (ray.distance / maxRenderDistance), 0.f);
-      float shade = (ray.isHitVertical ? 0.8f : 1.f) * brightness;
-      // float shade = (ray.isHitVertical ? 0.8f : 1.f); // without brightness
-      float wallOffset = SCREEN_H / 2.f - wallHeight / 2.f;
+      int x = mapPos.x, y = mapPos.y;
+      const auto &grid = map.getGrid();
 
-      sf::RectangleShape column(sf::Vector2f(COLUMN_WIDTH, wallHeight));
-      column.setPosition(sf::Vector2f(i * COLUMN_WIDTH, wallOffset));
+      if (y >= 0 && y < grid.size() && x >= 0 && x < grid[y].size() && grid[y][x] != sf::Color::Black) {
+        didHit = true;
+      }
 
-      float fogPercentage = std::max(std::min(ray.distance / maxFogDistance, 1.f), 0.f);
+      depth++;
+    }
 
-      sf::Color color = map.getGrid()[ray.mapPosition.y][ray.mapPosition.x];
-      sf::Color colorWithShade = sf::Color(color.r * shade, color.g * shade, color.b * shade);
-      column.setFillColor(sf::Color((1.f - fogPercentage) * colorWithShade.r + fogPercentage * SKY_COLOR.r,
-                                    (1.f - fogPercentage) * colorWithShade.g + fogPercentage * SKY_COLOR.g,
-                                    (1.f - fogPercentage) * colorWithShade.b + fogPercentage * SKY_COLOR.b));
-      target.draw(column);
+    if (didHit) {
+      float perpWallDist = isHitVertical ? sideDist.y - deltaDist.y : sideDist.x - deltaDist.x;
+      float wallHeight = SCREEN_H / perpWallDist;
+
+      float wallStart = (-wallHeight + SCREEN_H) / 2.f;
+      float wallEnd = (wallHeight + SCREEN_H) / 2.f;
+
+      float textureSize = wallTexture.getSize().x;
+
+      float wallX = isHitVertical ? rayPos.x + perpWallDist * rayDir.x : rayPos.y + perpWallDist * rayDir.y;
+
+      wallX -= std::floor(wallX);
+      float textureX = wallX * textureSize;
+
+      float brightness = 1.f - (perpWallDist / (float) MAX_RAYCASTING_DEPTH);
+
+      if (isHitVertical) {
+        brightness *= 0.7f;
+      }
+
+      sf::Color color = sf::Color(255 * brightness, 255 * brightness, 255 * brightness);
+
+      walls.append(sf::Vertex({sf::Vector2f((float) i, wallStart), color, sf::Vector2f(textureX, 0.f)}));
+      walls.append(
+        sf::Vertex({sf::Vector2f((float) i, wallEnd), color, sf::Vector2f(textureX, textureSize)}));
     }
   }
+
+  sf::RenderStates states{&wallTexture};
+  target.draw(walls, states);
 }
 
-void Renderer::drawRays(sf::RenderTarget &target, const Player &player, const Map &map) {
-  for (float angle = player.angle - PLAYER_FOV / 2.f; angle < player.angle + PLAYER_FOV; angle += 0.5f) {
-    Ray ray = castRay(player.position, angle, map);
-
-    if (ray.hit) {
-      sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-      line[0].position = player.position;
-      line[1].position = ray.hitPosition;
-
-      target.draw(line);
-    }
-  }
-}
-
-
-Ray castRay(sf::Vector2f start, float angleInDegrees, const Map &map) {
-  const float angle = angleInDegrees * PI / 180.0f;
-  const float vTan = -std::tan(angle), hTan = -1.0f / std::tan(angle);
-  const float cellSize = map.getCellSize();
-  const auto &grid = map.getGrid();
-
-  size_t vDof = 0, hDof = 0;
-  float hDist = std::numeric_limits<float>::max();
-  float vDist = std::numeric_limits<float>::max();
-
-  bool hit = false;
-
-  sf::Vector2u vMapPos, hMapPos;
-  sf::Vector2f vRayPos, hRayPos, offset;
-
-  // Vertical
-  if (std::cos(angle) > 0.001f) {
-    vRayPos.x = std::floor(start.x / cellSize) * cellSize + cellSize;
-    vRayPos.y = (start.x - vRayPos.x) * vTan + start.y;
-    offset.x = cellSize;
-    offset.y = -offset.x * vTan;
-  } else if (std::cos(angle) < -0.001f) {
-    vRayPos.x = std::floor(start.x / cellSize) * cellSize - 0.01f;
-    vRayPos.y = (start.x - vRayPos.x) * vTan + start.y;
-    offset.x = -cellSize;
-    offset.y = -offset.x * vTan;
-  } else {
-    vDof = MAX_RAYCASTING_DEPTH;
-  }
-
-
-  for (; vDof < MAX_RAYCASTING_DEPTH; vDof++) {
-    int mapX = (int) (vRayPos.x / cellSize);
-    int mapY = (int) (vRayPos.y / cellSize);
-
-    if (mapY < grid.size() && mapX < grid[mapY].size() && grid[mapY][mapX] != sf::Color::Black) {
-      hit = true;
-      vDist = std::sqrt(
-        (vRayPos.x - start.x) * (vRayPos.x - start.x) +
-        (vRayPos.y - start.y) * (vRayPos.y - start.y)
-      );
-      vMapPos = sf::Vector2u(mapX, mapY);
-      break;
-    }
-
-    vRayPos += offset;
-  }
-
-  // Horizontal
-  if (std::sin(angle) > 0.001f) {
-    hRayPos.y = std::floor(start.y / cellSize) * cellSize + cellSize;
-    hRayPos.x = (start.y - hRayPos.y) * hTan + start.x;
-    offset.y = cellSize;
-    offset.x = -offset.y * hTan;
-  } else if (std::sin(angle) < -0.001f) {
-    hRayPos.y = std::floor(start.y / cellSize) * cellSize - 0.01f;
-    hRayPos.x = (start.y - hRayPos.y) * hTan + start.x;
-    offset.y = -cellSize;
-    offset.x = -offset.y * hTan;
-  } else {
-    hDof = MAX_RAYCASTING_DEPTH;
-  }
-
-
-  for (; hDof < MAX_RAYCASTING_DEPTH; hDof++) {
-    int mapX = (int) (hRayPos.x / cellSize);
-    int mapY = (int) (hRayPos.y / cellSize);
-
-    if (mapY < grid.size() && mapX < grid[mapY].size() && grid[mapY][mapX] != sf::Color::Black) {
-      hit = true;
-      hDist = std::sqrt(
-        (hRayPos.x - start.x) * (hRayPos.x - start.x) +
-        (hRayPos.y - start.y) * (hRayPos.y - start.y)
-      );
-      hMapPos = sf::Vector2u(mapX, mapY);
-      break;
-    }
-
-    hRayPos += offset;
-  }
-
-  return Ray{
-    hDist < vDist
-      ? hRayPos
-      : vRayPos,
-    hDist < vDist
-      ? hMapPos
-      : vMapPos,
-    std::min(hDist, vDist),
-    hit,
-    vDist < hDist
-  };
-}
